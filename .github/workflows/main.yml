@@ -1,0 +1,4 @@
+- name: Run Tests
+  env:
+    token: ${{secrets.TOKEN}}
+  run: python Main.py
