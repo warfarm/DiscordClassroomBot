@@ -24,7 +24,10 @@ from discord.ui import Button, Select, View
 
 load_dotenv()
 token = os.environ["TOKEN"]
-bot = discord.Bot()
+
+intents = discord.Intents.all()
+
+bot = discord.Bot(intents=intents)
 
 commandList = {
     
@@ -33,16 +36,21 @@ commandList = {
   "/authenticate": "Prompts Authentication",
   "/assignments": "Returns an embed of all your assignments (WIP)",
   "/courses": "Returns an embed of all your courses",
+  "/classroom": "Sends a link to Google Classroom",
+  "/message": "The bot will DM you",
+  "/toggledm": "Toggle between DM and channel messages"
 
 }
 
-@bot.slash_command()
+#say hello
+@bot.slash_command(description = commandList["/hello"])
 async def hello(ctx):
     def check(c):
       return c.content("hello")
     await ctx.respond(f"Hello {ctx.author.mention}!")
 
-@bot.slash_command()
+#get list of commands
+@bot.slash_command(description = commandList["/commands"])
 async def commands(ctx):
     embed = discord.Embed(title = "Help Commands", colour = (discord.Colour.blue()))
 
@@ -51,60 +59,73 @@ async def commands(ctx):
     
     await ctx.respond(embed=embed)
 
-# @bot.slash_command()
-# async def getwebsite(ctx):
-#   #await ctx.respond("Is your grade above or below 65?")
-#   #def check(m):
-#     #return m.author == ctx.author and m.message == "below"
-#   #bot.wait_for("below", check=check)
-#   embed = discord.Embed(title="Website: ", description= "")
-#   embed.add_field(name="https://TestTakingTips.presidentshrubb.repl.co", value=" ", inline=True)
-#   await ctx.respond(f" Good luck {ctx.author.mention}")
-#   await ctx.respond(embed = embed)
+# doDM = False
+@bot.slash_command(description = commandList["/message"])
+async def message(ctx, choice):
+  if (choice == "DM"):
+    await ctx.author.send("Well hello there!")
+    await ctx.respond("Amogus")
+  else:
+    await ctx.respond(f"You, {ctx.author.mention} are sus")
+  
+  # DM = bot.create_dm(ctx.author)
+  # await DM.send("Hi")
 
-# GET COURSES
+# @bot.slash_command(description = commandList["/toggledm"])
+# async def toggledm(ctx):
+#    doDM = not doDM
+#    await ctx.respond(f"Set DM Toggle to {doDM}")
+   
 
-@bot.slash_command()
+#authenticate google account
+@bot.slash_command(description = commandList["/authenticate"])
 async def authenticate(ctx):
   if os.path.exists("token.json"):
     os.remove("token.json")
-  
-  # flow = Flow.from_client_secrets_file(
-  #               'credentials.json', quickstart.getScopes(),
-  #               redirect_uri='urn:ietf:wg:oauth:2.0:oob')
 
-  # auth_url, _ = flow.authorization_url(prompt='consent')
-  await ctx.respond(f"Authentication Request Received.")
+  await ctx.respond(f"Please paste your authentication code in channel. The link will expire in 5 minutes")
 
-  flow = InstalledAppFlow.from_client_secrets_file(
-                'credentials.json', quickstart.getScopes())
+  # flow = InstalledAppFlow.from_client_secrets_file(
+  #               'credentials.json', quickstart.getScopes())
   
-  creds = flow.run_local_server(port=0)
-  # await ctx.respond(f"Please go to this URL: {auth_url}")
+  # creds = flow.run_local_server(port=0)
+
+  flow = Flow.from_client_secrets_file(
+                'credentials.json', quickstart.getScopes(),
+                redirect_uri='urn:ietf:wg:oauth:2.0:oob')
+
+  auth_url, _ = flow.authorization_url(time = 300, prompt='consent')
+
+  await ctx.respond(f"Please go to this URL: {auth_url}")
+
+  def check(m):
+    return m.author == ctx.author and m.channel == ctx.channel
   
-  if creds:
-    await ctx.send(f"Authentication successful {ctx.author.mention}")
+  
+  code = (await bot.wait_for("message", check=check)).content
+  print(code)
+  
+  try:
+    flow.fetch_token(code=code)
+    creds = flow.credentials
+  except:
+     await ctx.respond(f"Authentication Failed, please try again.")
   else:
-    await ctx.send(f"Authentication unsuccessful {ctx.author.mention}")
-
-  # def check(m):
-  #   return m.author == ctx.author
-  
-  # code = await bot.wait_for("message", check=check)
-  
-  # flow.fetch_token(code=code)
-  # creds = flow.credentials
-
-  with open('token.json', 'w') as token:
+    if creds:
+      await ctx.send(f"Authentication successful {ctx.author.mention}")
+      with open('token.json', 'w') as token:
             token.write(creds.to_json())
 
-  try:
+      try:
         service = build('classroom', 'v1', credentials=creds, static_discovery = False)
 
-  except HttpError as error:
+      except HttpError as error:
         print('An error occurred: %s' % error)
+    else:
+      await ctx.send(f"Authentication unsuccessful {ctx.author.mention}")
 
-@bot.slash_command()
+#get courses
+@bot.slash_command(description = commandList["/courses"])
 async def courses(ctx):
   embed = discord.Embed(title = "Courses")
 
@@ -134,10 +155,10 @@ async def courses(ctx):
   
   await ctx.respond(embed=embed)  
 
-@bot.slash_command()
+#get assignments
+@bot.slash_command(description = commandList["/assignments"])
 async def assignments(ctx):
   embed = discord.Embed(title = "Assignments")
-
   creds = quickstart.main()
   try:
       service = build('classroom', 'v1', credentials=creds, static_discovery = False)
@@ -145,30 +166,66 @@ async def assignments(ctx):
       page_token = None
 
       while True:
-            # pylint: disable=maybe-no-member
-          response = service.courses().courseWork.list(pageToken=page_token,
+        response = service.courses().list(pageToken=page_token,
                                               pageSize=100).execute()
-          courses.extend(response.get('courseWork', []))
-          page_token = response.get('nextPageToken', None)
-          if not page_token:
-              break
+        courses.extend(response.get('courses', []))
+        page_token = response.get('nextPageToken', None)
+        if not page_token:
+          break
+
 
       if not courses:
-          await ctx.respond("No Courses found.")
-          return
-      #print("Courses:")
-      for course in courses:
-        for work in service.courses().courseWork.list:
-            #print(f"{course.get('name'), course.get('id')}")
-          embed.add_field(name = f"{service.course.courseWork.get(course.get('id'))}")
-      #return courses
+        await ctx.respond("No Assignments found.")
+      for cNum in courses:
+          coursework = service.courses().courseWork().list(courseId = cNum.get('id'))
+          if not coursework:
+            await ctx.respond("No Assignments found.")
+
+          for course in coursework:
+            embed.add_field(name = f"{course.get('name')}")   
+
   except HttpError as error:
-        #print(f"An error occurred: {error}")
       await ctx.respond(f"An error occured: {error}")
       
       return error
   
   await ctx.respond(embed=embed) 
+
+@bot.slash_command(description = commandList["/classroom"])
+async def classroom(ctx):
+    await ctx.respond(f"https://www.classroom.google.com")
+
+#run 
+bot.run(token)
+bot.respond("started!")
+
+  
+  # flow = Flow.from_client_secrets_file(
+  #               'credentials.json', quickstart.getScopes(),
+  #               redirect_uri='urn:ietf:wg:oauth:2.0:oob')
+
+  # auth_url, _ = flow.authorization_url(prompt='consent')
+
+  # await ctx.respond(f"Please go to this URL: {auth_url}")
+
+  # def check(m):
+  #   return m.author == ctx.author
+  
+  # code = await bot.wait_for("message", check=check)
+  
+  # flow.fetch_token(code=code)
+  # creds = flow.credentials
+
+# @bot.slash_command()
+# async def getwebsite(ctx):
+#   #await ctx.respond("Is your grade above or below 65?")
+#   #def check(m):
+#     #return m.author == ctx.author and m.message == "below"
+#   #bot.wait_for("below", check=check)
+#   embed = discord.Embed(title="Website: ", description= "")
+#   embed.add_field(name="https://TestTakingTips.presidentshrubb.repl.co", value=" ", inline=True)
+#   await ctx.respond(f" Good luck {ctx.author.mention}")
+#   await ctx.respond(embed = embed)
 
 # @bot.slash_command()
 # async def getscores(ctx):
@@ -185,14 +242,3 @@ async def assignments(ctx):
 #         #print('This command is not online yet.')
 #     #else:
 #         #print('This command is not online yet. Wait 3 hours.')
-    
-
-      
-
-
-      
-
-bot.run(token)
-
-
-

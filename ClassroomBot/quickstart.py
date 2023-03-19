@@ -42,6 +42,7 @@ def main():
             # The user will get an authorization code. This code is used to get the
             # access token.
             code = input('Enter the authorization code: ')
+            
             flow.fetch_token(code=code)
             creds = flow.credentials
             # creds = flow.run_local_server(port=0)
