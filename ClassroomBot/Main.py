@@ -29,6 +29,8 @@ intents = discord.Intents.all()
 
 bot = discord.Bot(intents=intents)
 
+discordLink = "https://discord.gg/R53NYpVWHw"
+
 commandList = {
     
   "/commands": "Gets command List",
@@ -38,7 +40,8 @@ commandList = {
   "/courses": "Returns an embed of all your courses",
   "/classroom": "Sends a link to Google Classroom",
   "/message": "The bot will DM you",
-  "/toggledm": "Toggle between DM and channel messages"
+  "/toggledm": "Toggle between DM and channel messages",
+  "/discord": "Returns the Bot Discord Server"
 
 }
 
@@ -194,6 +197,10 @@ async def assignments(ctx):
 @bot.slash_command(description = commandList["/classroom"])
 async def classroom(ctx):
     await ctx.respond(f"https://www.classroom.google.com")
+  
+@bot.slash_command(description = commandList["/discord"])
+async def discord(ctx):
+    await ctx.respond(discordLink)
 
 #run 
 bot.run(token)
