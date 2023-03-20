@@ -29,7 +29,9 @@ intents = discord.Intents.all()
 
 bot = discord.Bot(intents=intents)
 
-discordLink = "https://discord.gg/R53NYpVWHw"
+classLink = "https://www.classroom.google.com"
+discLink = "https://discord.gg/R53NYpVWHw"
+jupLink = "https://login.jupitered.com/login/"
 
 commandList = {
     
@@ -40,8 +42,9 @@ commandList = {
   "/courses": "Returns an embed of all your courses",
   "/classroom": "Sends a link to Google Classroom",
   "/message": "The bot will DM you",
-  "/toggledm": "Toggle between DM and channel messages",
-  "/discord": "Returns the Bot Discord Server"
+  #"/toggledm": "Toggle between DM and channel messages",
+  "/discord": "Returns the Bot Discord Server",
+  "/jupiter": "Sends a link to Jupiter"
 
 }
 
@@ -53,7 +56,7 @@ async def hello(ctx):
     await ctx.respond(f"Hello {ctx.author.mention}!")
 
 #get list of commands
-@bot.slash_command(description = commandList["/commands"])
+@bot.slash_command(name = "commands", description = commandList["/commands"])
 async def commands(ctx):
       embed = discord.Embed(title = "Help Commands", colour = discord.Colour.blue())
 
@@ -78,10 +81,9 @@ async def message(ctx, choice):
 # async def toggledm(ctx):
 #    doDM = not doDM
 #    await ctx.respond(f"Set DM Toggle to {doDM}")
-   
 
 #authenticate google account
-@bot.slash_command(description = commandList["/authenticate"])
+@bot.slash_command(name = "authenticate",description = commandList["/authenticate"])
 async def authenticate(ctx):
   if os.path.exists("token.json"):
     os.remove("token.json")
@@ -128,7 +130,7 @@ async def authenticate(ctx):
       await ctx.send(f"Authentication unsuccessful {ctx.author.mention}")
 
 #get courses
-@bot.slash_command(description = commandList["/courses"])
+@bot.slash_command(name = "courses", description = commandList["/courses"])
 async def courses(ctx):
   embed = discord.Embed(title = "Courses")
 
@@ -159,7 +161,7 @@ async def courses(ctx):
   await ctx.respond(embed=embed)  
 
 #get assignments
-@bot.slash_command(description = commandList["/assignments"])
+@bot.slash_command(name = "assignments", description = commandList["/assignments"])
 async def assignments(ctx):
   embed = discord.Embed(title = "Assignments")
   creds = quickstart.main()
@@ -194,17 +196,29 @@ async def assignments(ctx):
   
   await ctx.respond(embed=embed) 
 
-@bot.slash_command(description = commandList["/classroom"])
+@bot.slash_command(name = "classroom", description = commandList["/classroom"])
 async def classroom(ctx):
-    await ctx.respond(f"https://www.classroom.google.com")
+    embed = discord.Embed(title="Classroom link: ", description=classLink)
+    await ctx.respond(embed=embed)
+
+@bot.slash_command(name = "jupiter", description = commandList["/jupiter"])
+async def jupiter(ctx):
+   embed = discord.Embed(title="Jupiter link: " , description=jupLink)
+   await ctx.respond(embed=embed)  
   
-@bot.slash_command(description = commandList["/discord"])
-async def discord(ctx):
-    await ctx.respond(discordLink)
+@bot.slash_command(name = "discord", description = commandList["/discord"])
+async def serverinvite(ctx):
+    await ctx.respond(discLink)
 
 #run 
+
+
 bot.run(token)
-bot.respond("started!")
+# @bot.event
+# async def on_ready():
+#   print("Works?")
+#   channel = bot.get_channel(1087075530416869496)
+#   await channel.send("Online!") 
 
   
   # flow = Flow.from_client_secrets_file(
