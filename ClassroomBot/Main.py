@@ -55,12 +55,12 @@ async def hello(ctx):
 #get list of commands
 @bot.slash_command(description = commandList["/commands"])
 async def commands(ctx):
-    embed = discord.Embed(title = "Help Commands", colour = (discord.Colour.blue()))
+      embed = discord.Embed(title = "Help Commands", colour = discord.Colour.blue())
 
-    for i, v in commandList.items():
-      embed.add_field(name = i, value = v)
+      for i, v in commandList.items():
+        embed.add_field(name = i, value = v)
     
-    await ctx.respond(embed=embed)
+      await ctx.respond(embed=embed)
 
 # doDM = False
 @bot.slash_command(description = commandList["/message"])
